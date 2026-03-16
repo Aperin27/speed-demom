@@ -26,7 +26,7 @@ const winnerText = document.getElementById("winner-text");
 const resultsList = document.getElementById("results-list");
 
 const BACKEND_HTTP_URL = "https://speed-demom.onrender.com/";
-const BACKEND_WS_URL = "wss://speed-demom.onrender.com/";
+const BACKEND_WS_URL = "wss://speed-demom.onrender.com/ws";
 
 let socket = null;
 let nickname = "";
