@@ -28,6 +28,8 @@ const resultsList = document.getElementById("results-list");
 const BACKEND_HTTP_URL = "https://speed-demom.onrender.com/";
 const BACKEND_WS_URL = "wss://speed-demom.onrender.com/ws";
 
+const connectionMessage = document.getElementById("connection-message");
+
 let socket = null;
 let nickname = "";
 let roomCode = "";
@@ -66,6 +68,7 @@ function connectWebSocket() {
       roomCodeDisplay.textContent = roomCode;
       updatePlayersList();
       updateHostControls();
+      hideConnectionMessage();
       showScreen(lobbyScreen);
     }
 
@@ -96,6 +99,16 @@ function connectWebSocket() {
       alert(data.message);
     }
   };
+}
+
+function showConnectionMessage(message) {
+  connectionMessage.textContent = message;
+  connectionMessage.classList.remove("hidden");
+}
+
+function hideConnectionMessage() {
+  connectionMessage.textContent = "";
+  connectionMessage.classList.add("hidden");
 }
 
 function updatePlayersList() {
@@ -221,6 +234,7 @@ function createRoom() {
     return;
   }
 
+  showConnectionMessage("Waking server...");
   connectWebSocket();
 
   socket.onopen = () => {
