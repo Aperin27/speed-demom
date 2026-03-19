@@ -53,7 +53,7 @@ function showScreen(screenToShow) {
 }
 
 async function wakeServer() {
-  const maxAttempts = 50;
+  const maxAttempts = 200;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
