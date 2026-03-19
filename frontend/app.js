@@ -52,50 +52,88 @@ function showScreen(screenToShow) {
   screenToShow.classList.remove("hidden");
 }
 
+async function wakeServer() {
+  const maxAttempts = 20;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${BACKEND_HTTP_URL}/health`);
+
+      if (response.ok) {
+        return true;
+      }
+    } catch (error) {
+      console.log("Server still waking up...", attempt);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+
+  return false;
+}
+
 function connectWebSocket() {
-  socket = new WebSocket(BACKEND_WS_URL);
+  return new Promise((resolve, reject) => {
+    socket = new WebSocket(BACKEND_WS_URL);
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    socket.onopen = () => {
+      resolve();
+    };
 
-    if (data.type === "room_created") {
-      roomCode = data.room_code;
-      players = data.players;
-      host = data.host;
+    socket.onerror = (error) => {
+      reject(error);
+    };
 
-      roomCodeDisplay.textContent = roomCode;
-      updatePlayersList();
-      updateHostControls();
-      showScreen(lobbyScreen);
-    }
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-    if (data.type === "player_joined") {
-      roomCode = data.room_code;
-      players = data.players;
-      host = data.host;
+      if (data.type === "room_created") {
+        roomCode = data.room_code;
+        players = data.players;
+        host = data.host;
 
-      roomCodeDisplay.textContent = roomCode;
-      updatePlayersList();
-      updateHostControls();
-      showScreen(lobbyScreen);
-    }
+        roomCodeDisplay.textContent = roomCode;
+        updatePlayersList();
+        updateHostControls();
+        createRoomBtn.disabled = false;
+        joinRoomBtn.disabled = false;
+        createRoomBtn.textContent = "Create Room";
+        joinRoomBtn.textContent = "Join Room";
+        showScreen(lobbyScreen);
+      }
 
-    if (data.type === "game_started") {
-      questions = data.questions;
-      gameDuration = data.duration;
-      currentQuestionIndex = 0;
-      startCountdown();
-    }
+      if (data.type === "player_joined") {
+        roomCode = data.room_code;
+        players = data.players;
+        host = data.host;
 
-    if (data.type === "game_results") {
-      renderResults(data.scores, data.winner);
-      showScreen(resultScreen);
-    }
+        roomCodeDisplay.textContent = roomCode;
+        updatePlayersList();
+        updateHostControls();
+        createRoomBtn.disabled = false;
+        joinRoomBtn.disabled = false;
+        createRoomBtn.textContent = "Create Room";
+        joinRoomBtn.textContent = "Join Room";
+        showScreen(lobbyScreen);
+      }
 
-    if (data.type === "error") {
-      alert(data.message);
-    }
-  };
+      if (data.type === "game_started") {
+        questions = data.questions;
+        gameDuration = data.duration;
+        currentQuestionIndex = 0;
+        startCountdown();
+      }
+
+      if (data.type === "game_results") {
+        renderResults(data.scores, data.winner);
+        showScreen(resultScreen);
+      }
+
+      if (data.type === "error") {
+        alert(data.message);
+      }
+    };
+  });
 }
 
 function updatePlayersList() {
@@ -213,7 +251,7 @@ function endGame() {
   showScreen(resultScreen);
 }
 
-function createRoom() {
+async function createRoom() {
   nickname = nicknameInput.value.trim();
 
   if (!nickname) {
@@ -221,17 +259,39 @@ function createRoom() {
     return;
   }
 
-  connectWebSocket();
+  createRoomBtn.disabled = true;
+  joinRoomBtn.disabled = true;
+  createRoomBtn.textContent = "Waking server...";
 
-  socket.onopen = () => {
+  const serverReady = await wakeServer();
+
+  if (!serverReady) {
+    alert("The server took too long to wake up. Please try again.");
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
+    createRoomBtn.textContent = "Create Room";
+    return;
+  }
+
+  createRoomBtn.textContent = "Connecting...";
+
+  try {
+    await connectWebSocket();
+
     socket.send(JSON.stringify({
       type: "create_room",
       nickname: nickname
     }));
-  };
+  } catch (error) {
+    alert("Could not connect to the server.");
+    console.error(error);
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
+    createRoomBtn.textContent = "Create Room";
+  }
 }
 
-function joinRoom() {
+async function joinRoom() {
   nickname = nicknameInput.value.trim();
   const enteredRoomCode = roomCodeInput.value.trim().toUpperCase();
 
@@ -245,15 +305,37 @@ function joinRoom() {
     return;
   }
 
-  connectWebSocket();
+  createRoomBtn.disabled = true;
+  joinRoomBtn.disabled = true;
+  joinRoomBtn.textContent = "Waking server...";
 
-  socket.onopen = () => {
+  const serverReady = await wakeServer();
+
+  if (!serverReady) {
+    alert("The server took too long to wake up. Please try again.");
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
+    joinRoomBtn.textContent = "Join Room";
+    return;
+  }
+
+  joinRoomBtn.textContent = "Connecting...";
+
+  try {
+    await connectWebSocket();
+
     socket.send(JSON.stringify({
       type: "join_room",
       room_code: enteredRoomCode,
       nickname: nickname
     }));
-  };
+  } catch (error) {
+    alert("Could not connect to the server.");
+    console.error(error);
+    createRoomBtn.disabled = false;
+    joinRoomBtn.disabled = false;
+    joinRoomBtn.textContent = "Join Room";
+  }
 }
 
 function requestStartGame() {
