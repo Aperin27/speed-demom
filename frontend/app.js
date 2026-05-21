@@ -25,8 +25,8 @@ const answerInput = document.getElementById("answer-input");
 const winnerText = document.getElementById("winner-text");
 const resultsList = document.getElementById("results-list");
 
-const BACKEND_HTTP_URL = "https://speed-demon.onrender.com/";
-const BACKEND_WS_URL = "wss://speed-demon.onrender.com/ws";
+const BACKEND_HTTP_URL = "https://speed-demom.onrender.com/";
+const BACKEND_WS_URL = "wss://speed-demom.onrender.com/ws";
 
 const connectionMessage = document.getElementById("connection-message");
 
@@ -291,5 +291,8 @@ answerInput.addEventListener("keydown", (event) => {
 });
 
 playAgainBtn.addEventListener("click", () => {
-  showScreen(homeScreen);
+  socket.send(JSON.stringify({
+    type: "play again",
+    room_code: roomCode
+  }));
 });
